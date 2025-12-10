@@ -35,7 +35,7 @@ c_bar = cos(theta_bar) ;
 dmy = 0.6;
 b_tilde = 0.005;
 
-Mx_des = 1;
+Mx_des = 2;
 My_des = 1;
 Mz_des = 1;
 Fz_des = 1;
