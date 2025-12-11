@@ -1,7 +1,7 @@
 %% Frequenza cardiaca sintetica realistica - Calciatore (con eventi + goal + recupero)
 clear; clc; close all;
 
-rng(180); % cambia questo numero per un match diverso
+rng(10); % cambia questo numero per un match diverso
 
 %% Parametri base
 fs = 1;                % 1 Hz (1 campione al secondo)
@@ -10,8 +10,8 @@ dt = 1/fs;
 % -----------------------------
 % RECUPERO (in minuti)
 % -----------------------------
-rec1_min = 3;   % recupero 1° tempo (es. 0,1,2,3,4...)
-rec2_min = 1;   % recupero 2° tempo
+rec1_min = 2;   % recupero 1° tempo (es. 0,1,2,3,4...)
+rec2_min = 5;   % recupero 2° tempo
 
 T_half1  = (45 + rec1_min)*60;   % 1° tempo in secondi
 T_ht     = 15*60;                % intervallo
@@ -39,7 +39,7 @@ sd = [  6,   6,   5,   4];  % variabilità target
 match_shift = 5*randn;          % sposta tutta la HR di qualche bpm
 mu = mu + match_shift;
 
-sd_scale = 0.7 + 0.8*rand;      % più o meno "nervosa" la partita
+sd_scale = 0.9 + 0.88*rand;      % più o meno "nervosa" la partita
 sd = sd .* sd_scale;
 
 %% Matrice di transizione (base)
@@ -51,7 +51,7 @@ P_base = [0.84 0.14 0.02 0.00;
 %% -----------------------------
 % LEGGERA RANDOMIZZAZIONE DI P
 % -----------------------------
-P = P_base + 0.1*randn(size(P_base));
+P = P_base + 0.01*randn(size(P_base));
 P(P < 0) = 0;
 row_sums = sum(P,2);
 row_sums(row_sums == 0) = 1;
@@ -117,7 +117,7 @@ end
 % NOTA: con recupero, puoi inserire anche 46..(90+rec2_min)
 % Esempio: goal al 4', 25', 43', 90' ecc.
 % -----------------------------
-goal_match_minutes = [4, 25, 43];  % <-- MODIFICA QUI (puoi anche mettere [])
+goal_match_minutes = [77];  % <-- MODIFICA QUI (puoi anche mettere [])
 
 % Parametri picco goal
 % (Se vuoi valori realistici: prova goal_amp_base ~ 8-14)
@@ -208,7 +208,7 @@ ax.Box = 'off';
 
 xlabel(ax, 'Tempo (min)', 'Color', [0.85 0.85 0.85]);
 ylabel(ax, 'Frequenza cardiaca (bpm)', 'Color', [0.85 0.85 0.85]);
-title(ax, 'Frequenza cardiaca - Calciatore 4', 'Color', [0.95 0.95 0.95]);
+title(ax, 'Frequenza cardiaca - Calciatore 5', 'Color', [0.95 0.95 0.95]);
 
 % Evidenzia fine 1° tempo e inizio 2° tempo (con recupero)
 end1_min_timeline = first_half_end_min;       % sulla timeline reale

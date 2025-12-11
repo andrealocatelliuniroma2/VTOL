@@ -1331,7 +1331,9 @@ switch test_id
         R = matriceRotazione(phi,theta,psi); % matrice di rotazione
         V_global = R*V_body ;
         vx_global = V_global(1); vy_global = V_global(2); vz_global = V_global(3);
- 
+
+
+      
 
         % PD Attitudine (Roll & Pitch)
         kp_phi = 40;   kd_phi = 8;
@@ -1385,6 +1387,7 @@ switch test_id
         e_psi = psi_des - psi;
         de_psi = 0 - r;
 
+        % Richiesta di Momento Yaw
         Moment_yaw_req = kp_psi * e_psi + kd_psi * de_psi;
 
         % =========================================================

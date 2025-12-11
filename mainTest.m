@@ -198,10 +198,10 @@ x0 = zeros(35,1);
 % verticale di yaw
 
 
-voloVerticale = 0; % flag per condizioni iniziali del volo verticale
+voloVerticale = 1; % flag per condizioni iniziali del volo verticale
 voloOrizzontale = 0; % flag per condizioni iniziali del volo orizzontale
 voloGenerale = 0;
-orientamentoVerticale = 1; % flag per condizioni iniziali del volo verticale + orientamento
+orientamentoVerticale = 0; % flag per condizioni iniziali del volo verticale + orientamento
 
 flagPlot = 1; % grafici + pallina
 plotPallina = 0;% pallina
@@ -222,12 +222,12 @@ if voloVerticale == 1
     %x0(7)=deg2rad(0.0796); roll compensa Fy
 
     %inclinazione iniziale del rotore di coda (per il volo verticale)
-    %x0(17) = atan2(-parametri.d_tx*parametri.k, parametri.b);
-    %x0(19)= -pi/2;
+    x0(17) = atan2(-parametri.d_tx*parametri.k, parametri.b);
+    x0(19)= -pi/2;
 
     %inclinazione iniziale del rotore di coda (per il volo verticale senza momento torcente)
-    x0(17) = pi/2;
-    x0(19)= 0;
+    % x0(17) = pi/2;
+    % x0(19)= 0;
 
 elseif voloOrizzontale == 1
 
