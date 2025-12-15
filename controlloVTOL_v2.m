@@ -1360,18 +1360,30 @@ switch test_id
         % =========================================================
 
         % angolo richiesto per compensare inclinazione rotore posteriore
-        num_roll = -cos(x(17))*sin(x(19))*params.k*(x(23)^2);
-        den_roll = cos(x(8))*params.m*params.g;
-        roll = asin(num_roll/den_roll);
+        % num_roll = -cos(x(17))*sin(x(19))*params.k*(x(23)^2);
+        % den_roll = cos(x(8))*params.m*params.g;
+        % roll = asin(num_roll/den_roll);
+        
+        % vy_des = 0;
+        % e_vy = vy_des - vy_global;
+        % 
+        % kp_vy = 0.5;                
+        % phi_cmd = kp_vy * e_vy;
+
+        y_des = 0;
+        e_y = y_des - x(2);
         
         vy_des = 0;
         e_vy = vy_des - vy_global;
 
+        kp_y = 0.5;    
         kp_vy = 0.5;                
-        phi_cmd = kp_vy * e_vy;
+        phi_cmd = kp_y * e_y +kp_vy * e_vy;
 
-        phi_des = roll + phi_cmd; 
-        %phi_des = phi_cmd;
+
+
+        %phi_des = roll + phi_cmd; 
+        phi_des = phi_cmd;
 
         % saturazione roll desiderato
         phi_max = deg2rad(20);
@@ -1386,11 +1398,21 @@ switch test_id
         %   PITCH (PD)
         % =========================================================
 
+        % vx_des = 0;                       
+        % e_vx = vx_des - vx_global;
+        % 
+        % kp_vx = 0.5;                      
+        % ax_des = kp_vx * e_vx;
+
+        x_des = 0;                       
+        e_x = x_des - x(1);
+        
         vx_des = 0;                       
         e_vx = vx_des - vx_global;
 
+        kp_x = 0.5; 
         kp_vx = 0.5;                      
-        ax_des = kp_vx * e_vx;
+        ax_des = kp_x * e_x + kp_vx * e_vx;
 
         theta_cmd = -ax_des;
 

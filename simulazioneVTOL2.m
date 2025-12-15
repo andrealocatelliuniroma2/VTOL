@@ -224,7 +224,7 @@ alpha1y=1;
 alpha0z =1;
 alpha1z =1;
 
-M_stab_pinna = [-x(10)*(alpha0x+alpha1x*x(5)^2);0;-x(12)*(alpha0z+alpha1z*x(5)^2)];
+M_stab_pinna = [-x(10)*alpha0x+alpha1x*x(5)^2;0;-x(12)*(alpha0z+alpha1z*x(5)^2)];
 % con variante in assenza di rotore anteriore
 %[-x(10)*alpha0x-alpha1x*(x(5)^2 +x(6)^2);-x(11)*(alpha0y+alpha1y*x(6)^2);-x(12)*(alpha0z+alpha1z*x(5)^2)];
 %M_stab_pinna = [0;0;0];
