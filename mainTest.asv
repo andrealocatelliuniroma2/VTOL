@@ -216,9 +216,9 @@ if voloVerticale == 1
     % posizione iniziale lungo z
     x0(3) = 0;
 
-    % x0(7) = deg2rad(5);
-    % x0(8) = deg2rad(5);
-    % x0(9) = deg2rad(5);
+    x0(7) = deg2rad(5);
+    x0(8) = deg2rad(5);
+    x0(9) = deg2rad(5);
 
     %inclinazione iniziale dei rotori anterioiri (per il volo verticale)
     x0(13)= pi/2;

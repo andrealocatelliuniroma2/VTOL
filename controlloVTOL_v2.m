@@ -3,7 +3,7 @@ function u = controlloVTOL_v2(params, x)
 % Preallocazione
 u = zeros(8,1);
 
-test_id = 12;
+test_id = 14;
 % TEST
 
 % -1 : Debug (tutto simbolico)
@@ -1311,7 +1311,7 @@ switch test_id
         
     case 14
 
-        u = zeros(15,1);
+        u = zeros(16,1);
 
         % angoli 
         phi = x(7); % roll
@@ -1323,9 +1323,7 @@ switch test_id
         q = x(11); % pitch rate
         r = x(12); % yaw rate
 
-        % --- CONTROLLO VERTICALE ROBUSTO + YAW CON TILT (X, Y, Z, PSI) ---
-
-        % 1. Estrazione Stato
+        % --- CONTROLLO VERTICALE  + ORIENTAMENTO  ---
 
         V_body = [x(4);x(5);x(6)];
         R = matriceRotazione(phi,theta,psi); % matrice di rotazione
@@ -1334,14 +1332,14 @@ switch test_id
  
 
         % PD Attitudine (Roll & Pitch)
-        kp_phi = 40;   kd_phi = 8;
-        kp_theta = 40; kd_theta = 8;
+        kp_phi = 15;   kd_phi = 3;
+        kp_theta = 15; kd_theta = 3;
 
         % PD Yaw (Imbardata)
-        kp_psi = 15;   kd_psi = 5;
+        kp_psi = 15;   kd_psi = 3;
 
         % =========================================================
-        %   LOOP Z (QUOTA) - Invariato
+        %   QUOTA - HOVERING (PD)
         % =========================================================
 
         z_des = -10; % asse z positivo verso il basso
@@ -1358,9 +1356,26 @@ switch test_id
         Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z); %PD
 
         % =========================================================
-        %   YAW
+        %   ROLL (PD)
         % =========================================================
-        phi_des = 0;
+
+        % angolo richiesto per compensare inclinazione rotore posteriore
+        num_roll = -cos(x(17))*sin(x(19))*params.k*(x(23)^2);
+        den_roll = cos(x(8))*params.m*params.g;
+        roll = asin(num_roll/den_roll);
+        
+        vy_des = 0;
+        e_vy = vy_des - vy_global;
+
+        kp_vy = 0.5;                
+        phi_cmd = kp_vy * e_vy;
+
+        phi_des = roll + phi_cmd; 
+        %phi_des = phi_cmd;
+
+        % saturazione roll desiderato
+        phi_max = deg2rad(20);
+        phi_des = max(min(phi_des, phi_max), -phi_max);
 
         e_phi = phi_des - phi;
         de_phi = 0 - p;
@@ -1368,9 +1383,23 @@ switch test_id
         Moment_roll_req = kp_phi * e_phi + kd_phi * de_phi;
 
         % =========================================================
-        %   PITCH
+        %   PITCH (PD)
         % =========================================================
-        theta_des = 0;
+
+        vx_des = 0;                       
+        e_vx = vx_des - vx_global;
+
+        kp_vx = 0.5;                      
+        ax_des = kp_vx * e_vx;
+
+        theta_cmd = -ax_des;
+
+        % saturazione pitch desiderato
+        theta_max = deg2rad(20);
+        theta_cmd = max(min(theta_cmd, theta_max), -theta_max);
+
+        theta_des = theta_cmd;     
+        %theta_des = 0;
 
         e_theta = theta_des - theta;
         de_theta = 0 - q;
@@ -1378,7 +1407,7 @@ switch test_id
         Moment_pitch_req = kp_theta * e_theta + kd_theta * de_theta;
 
         % =========================================================
-        %   YAW 
+        %   YAW (PD)
         % =========================================================
         psi_des = 0;
 
@@ -1388,7 +1417,7 @@ switch test_id
         Moment_yaw_req = kp_psi * e_psi + kd_psi * de_psi;
 
         % =========================================================
-        %   MIXING E ALLOCAZIONE AGGIORNATA
+        %   MIXING E ALLOCAZIONE 
         % =========================================================
         theta3_ideal = atan2(((-params.d_tx*params.k)/params.b),1);
         theta3_actual = x(17);
@@ -1397,7 +1426,7 @@ switch test_id
         denom_mix = params.d_mx*params.k*sin(theta3_actual) ...
             - params.d_tx*params.k*sin(theta3_actual) ...
             + params.b*cos(theta3_actual);
-        if abs(denom_mix) < 1e-6; denom_mix = 1e-6; end
+        %if abs(denom_mix) < 1e-6; denom_mix = 1e-6; end
 
         numeratore_coda = (params.d_mx * Thrust_req) - Moment_pitch_req;
         omega3_sq = numeratore_coda / denom_mix;
@@ -1406,36 +1435,30 @@ switch test_id
 
         % Spinta totale richiesta ai motori anteriori (componente Z)
         F_front_tot_z = Thrust_req - F_tail_z;
+        
         % Protezione per evitare divisioni per zero se i motori anteriori sono spenti
-        if F_front_tot_z < 0.1; F_front_tot_z = 0.1; end
+        %if F_front_tot_z < 0.1; F_front_tot_z = 0.1; end
 
-        omega_front_sq_base = F_front_tot_z / (2 * params.k);
+        omega_front_sq_base = F_front_tot_z / (2 * params.k*sin(x(13)));
 
         % --- 2. Mixing Laterale (Roll) ---
         braccio_y = params.d_my;
-        delta_omega_sq = Moment_roll_req / (params.k * braccio_y * 2);
+        delta_omega_sq = Moment_roll_req / (params.k * braccio_y * 2*sin(x(13)));
 
         omega_dx_sq = omega_front_sq_base - delta_omega_sq;
         omega_sx_sq = omega_front_sq_base + delta_omega_sq;
 
-        % --- 3. Mixing Yaw (Tilt Differenziale) ---
-        % Per generare Yaw, tiltiamo i motori in direzioni opposte.
-        % Momento Yaw = (F_motore * sin(tilt)) * braccio_y * 2 (circa)
-        % Assumendo piccoli angoli: sin(delta) ~ delta.
-        % Forza orizzontale disponibile = F_front_tot_z (approx, assumendo tilt piccoli)
-
-        % Calcolo angolo di tilt differenziale richiesto (in radianti)
-        % Nota: F_front_tot_z agisce come guadagno di autorità. Più spinta ho, meno tilt serve.
+        % --- 3. Mixing Yaw (Tilting) ---
+        
         delta_tilt_yaw = Moment_yaw_req / (F_front_tot_z * params.d_my);
 
         % Saturazione del tilt per sicurezza (es. max 20 gradi = 0.35 rad)
         max_tilt = 0.35;
+        
         delta_tilt_yaw = max(min(delta_tilt_yaw, max_tilt), -max_tilt);
+        %delta_tilt_yaw = 0;
 
         % Assegnazione Tilt (Partendo da pi/2 verticale)
-        % Segni: Dipendono dalla geometria esatta.
-        % Logica standard: Per Yaw positivo (naso a sinistra),
-        % Motore DX spinge indietro (Tilt > 90), Motore SX spinge avanti (Tilt < 90).
         tilt_1 = pi/2 + delta_tilt_yaw; % Motore DX (1)
         tilt_2 = pi/2 - delta_tilt_yaw; % Motore SX (2)
 
@@ -1447,8 +1470,8 @@ switch test_id
         u(1) = sqrt(omega_dx_sq);
         u(2) = sqrt(omega_sx_sq);
         u(3) = sqrt(omega3_sq);
-        u(4) = tilt_1;  % Tilt Destro Modulato
-        u(5) = tilt_2;  % Tilt Sinistro Modulato
+        u(4) = tilt_1;  % Tilt Destro 
+        u(5) = tilt_2;  % Tilt Sinistro 
         u(6) = theta3_ideal;
         u(7) = -pi/2;
 

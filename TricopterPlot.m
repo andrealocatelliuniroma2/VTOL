@@ -98,7 +98,7 @@ function TricopterPlot(t,x)
     % campos([0 0 0]);  % Initial camera position
     
 
-    % plot3(trajDes(1,:), trajDes(2,:), trajDes(3,:));
+    %plot3(trajDes(1,:), trajDes(2,:), trajDes(3,:));
 
     hold on;
     % Animation Loop

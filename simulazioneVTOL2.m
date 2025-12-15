@@ -134,13 +134,14 @@ F_g_body = F_grav(phi , theta , psi , params.m ,params.g); % body frame
 
 % THRUST 
 
-%input_thrust = [params.k*x(21)^2;params.k*x(23)^2;params.k*x(25)^2;x(13);x(15);x(17);x(19)];
+input_thrust = [params.k*x(21)^2;params.k*x(23)^2;params.k*x(25)^2;x(13);x(15);x(17);x(19)];
 %input_thrust = [params.k*x(21)^2;params.k*x(23)^2;params.k*x(25)^2;u(4);u(5);x(17);x(19)];
 %input_thrust = [params.k*u(1)^2;params.k*u(2)^2;params.k*u(3)^2;x(13);x(15);x(17);x(19)];
 %input_thrust = [params.k*u(1)^2;params.k*u(2)^2;params.k*u(3)^2;u(4);u(5);u(6);u(7)];
-input_thrust = [params.k*u(1)^2;params.k*u(2)^2;params.k*u(3)^2;u(4);u(5);x(17);x(19)];
+%input_thrust = [params.k*u(1)^2;params.k*u(2)^2;params.k*u(3)^2;u(4);u(5);x(17);x(19)];
 
 F_th_body = F_thrust(input_thrust); % body frame
+%F_th_body(2)=0;
 
 % disp("F_th_body = ");
 % disp(F_th_body);
@@ -169,6 +170,8 @@ F_tot_body = F_g_body+F_th_body+F_aero_body-F_cor; % body frame
 if abs(F_tot_body(1)) >= 0.0001
     test = 1;
 end
+
+%F_tot_body(2)=0;
 
 % disp("F_tot_body = ");
 % disp(F_tot_body);
@@ -208,7 +211,7 @@ Omega_rotor_tail = [0;x(18);x(20)];
 
 input_thrust_gyro = [x(21);x(23);x(25);x(13);x(15);x(17);x(19)];
 M_gyro_tilt = M_tilt_rotor(input_thrust_gyro,params.I_rotor_w_dx,params.I_rotor_w_sx,params.I_rotor_tail,Omega_rotor_w_dx , Omega_rotor_w_sx , Omega_rotor_tail);
-M_gyro_tilt =[0;0;0];
+%M_gyro_tilt =[0;0;0];
 
 % disp("M_gyro_tilt = ");
 % disp(M_gyro_tilt);
