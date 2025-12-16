@@ -224,8 +224,6 @@ if voloVerticale == 1
     x0(13)= pi/2;
     x0(15)= pi/2;
 
-    %x0(7)=deg2rad(0.0796); roll compensa Fy
-
     %inclinazione iniziale del rotore di coda (per il volo verticale)
     x0(17) = atan2(-parametri.d_tx*parametri.k, parametri.b);
     x0(19)= -pi/2;
@@ -236,26 +234,28 @@ if voloVerticale == 1
 
 elseif voloOrizzontale == 1
 
-    x0(4) = 23; % condizione iniziale della velocità lungo X (25 m/s)
+    x0(4) = 20; % condizione iniziale della velocità lungo X (25 m/s)
     x4eq = x0(4);
 
     % posizione iniziale lungo z
     x0(3) = -10;
 
     % velocità angolare iniziale dei rotori anteriori
-    % wind frame (NB:questo blocco di codice è anche in simulazioneVTOL2 e nelle condizioni iniziali del main)
     Va = sqrt((x0(4)^2)+(x0(5)^2)+(x0(6)^2)); % airspeed
-    alpha = atan2(x0(6),x0(4)); % angle of attack
+    %alpha = atan2(x0(6),x0(4)); % angle of attack
+    %beta = atan2(x0(5),sqrt((x0(4)^2)+(x0(6)^2))); % sideslip angle
     alpha = 0;
-    %beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
     beta = 0;
     Rwb = matriceRotazioneWingToBodyFrame(alpha,beta);
+     
     F0_x = (1/2)*parametri.rho*parametri.s_body_x*parametri.C_d_x*sign(x0(4))*x0(4)^2 -parametri.rho*parametri.s*(Va^2)*Rwb(1,:)*[-parametri.C_d;parametri.C_y;-parametri.C_l];
+    
     T_i = F0_x/2;
     x0(21)= sqrt(T_i/parametri.k);
     x0(23)= x0(21);
 
-    x0(8) = 0;
+    % rotore di coda spento
+    x0(25) = 0;
 
     %inclinazione iniziale dei rotori anterioiri (per il volo orizzontale)
     x0(13)= 0;

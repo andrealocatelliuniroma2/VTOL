@@ -95,33 +95,65 @@ J = matriceJ(phi,theta,psi); % matrice di trasformazione  : OmegaVtol_body (p,q,
 
 %% wind frame (NB:questo blocco di codice è anche nel controllo e nelle condizioni iniziali del main)
 Va = sqrt((x(4)^2)+(x(5)^2)+(x(6)^2)); % airspeed 
-%alpha = atan2(x(6),x(4)); % angle of attack   
-%beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
-alpha = 0;
-beta = 0;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% check velocità %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Va_min = 0.001;  % sotto questa soglia è come se non mi muovessi
+if Va < Va_min
+    alpha = 0;
+    beta  = 0;
+else
+
+    alpha = atan2(-x(6),x(4)); % angle of attack (il - dipende da NED)
+    beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Rwb = matriceRotazioneWingToBodyFrame(alpha,beta);
 
 %% forze aerodinamiche
 
-% vecchio metodo
-F_aeroWing = F_aerodyn_wing(params.C_l,params.C_d,0, params.rho ,x(4),x(6), params.s);
-
-% % nuovo metodo : aerodinamica ali
-% if abs(alpha) >= pi/2-0.001
-%     %F_aeroWing = F_aero_wing(params.C_l,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
-%     F_aeroWing = F_aero_wing(0,params.C_d,0, params.rho, params.s,Va,Rwb);
-% else
-%     F_aeroWing = F_aero_wing(params.C_l,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
-%     % vecchio metodo
-%     F_aeroWing2 = F_aerodyn_wing(params.C_l,params.C_d,0, params.rho ,x(4),x(6), params.s);
-% 
-%     if F_aeroWing ~= F_aeroWing2
-%         test =1;
-%     end
-% end
+%%%%%%%%%%%%%%%%% VOLO VERTICALE %%%%%%%%%%%%%%%%%%%%%%%%
 
 % nuovo metodo : aerodinamica corpo
 F_aeroBody = Drag_body(params.C_d_x,params.C_d_y,params.C_d_z, params.rho,params.s_body_x,params.s_body_y,params.s_body_z,x(4),x(5),x(6));
+
+% vecchio metodo : aerodinamica ali
+% tiene conto solo di portanza e drag lungo x delle ali (va bene per volo verticale)
+%F_aeroWing = F_aerodyn_wing(params.C_l,params.C_d,0, params.rho ,x(4),x(6), params.s);
+
+% nel caso di volo verticale va "riconsiderato coefficente di lift"
+
+alpha_abs = abs(alpha);
+alpha1 = deg2rad(45);   % inizio perdita di validità del modello di portanza
+alpha2 = deg2rad(85);   % portanza trascurabile
+
+% ottengo una coordinata normalizzata tra 0 e 1 in base al valore
+% dell'attuale angolo di attacco nell'intervallo considerato
+t = (alpha_abs - alpha1) / (alpha2 - alpha1);
+t = min(max(t, 0), 1);
+% funzione che decresce (max se t = 0 e min se t = 1)
+n = 1 - (3*t^2 - 2*t^3);
+% decadimento del coeff. di lift
+CL_eff = n * params.C_l;
+
+F_aeroWing = F_aero_wing(CL_eff,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
+
+
+
+%%%%%%%%%%%%%%%%% VOLO ORIZZONTALE %%%%%%%%%%%%%%%%%%%%%%%%
+
+% % nuovo metodo : aerodinamica corpo
+% F_aeroBody = Drag_body(params.C_d_x,params.C_d_y,params.C_d_z, params.rho,params.s_body_x,params.s_body_y,params.s_body_z,x(4),x(5),x(6));
+% 
+% % nuovo metodo : aerodinamica ali
+% F_aeroWing = F_aero_wing(params.C_l,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 %% eq. forze BODY FRAME
 
@@ -141,7 +173,6 @@ input_thrust = [params.k*x(21)^2;params.k*x(23)^2;params.k*x(25)^2;x(13);x(15);x
 %input_thrust = [params.k*u(1)^2;params.k*u(2)^2;params.k*u(3)^2;u(4);u(5);x(17);x(19)];
 
 F_th_body = F_thrust(input_thrust); % body frame
-%F_th_body(2)=0;
 
 % disp("F_th_body = ");
 % disp(F_th_body);

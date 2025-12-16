@@ -1,7 +1,7 @@
 function u = controlloVTOL_v2(params, x)
 
 % Preallocazione
-u = zeros(8,1);
+u = zeros(16,1);
 
 test_id = 14;
 % TEST
@@ -94,7 +94,7 @@ switch test_id
         z_des = -10; % asse z positivo verso il basso
         vz_des = 0; % hovering
 
-        F_z_des = -params.C_l*params.rho*params.s*x(4)^2 +params.m*params.g*cos(x(8))*cos(x(7)) - params.rho*params.s*params.C_d_z*sign(x(6))*x(6)^2;      
+        F_z_des = -params.C_l*params.rho*params.s*x(4)^2 +params.m*params.g*cos(x(8))*cos(x(7)) - params.rho*params.s_body_z*params.C_d_z*sign(x(6))*x(6)^2;      
         F_z_des = F_z_des +kp_z*(z_des-x(3))+kd_z*(vz_des-vz_global); %PD
 
 
@@ -1339,7 +1339,7 @@ switch test_id
         kp_psi = 15;   kd_psi = 3; ki_psi = 0.005;
 
         % =========================================================
-        %   QUOTA - HOVERING (PD)
+        %   QUOTA - HOVERING (PD/PID)
         % =========================================================
 
         z_des = -10; % asse z positivo verso il basso
@@ -1355,8 +1355,8 @@ switch test_id
         kd_z = -10;
         ki_z = -0.005;
         
-
-        F_z_des = -params.C_l*params.rho*params.s*x(4)^2 +params.m*params.g*cos(x(8))*cos(x(7)) - params.rho*params.s_body_z*params.C_d_z*sign(x(6))*x(6)^2;
+        %F_z_des = -params.C_l*params.rho*params.s*x(4)^2 +params.m*params.g*cos(x(8))*cos(x(7)) - params.rho*params.s_body_z*params.C_d_z*sign(x(6))*x(6)^2;
+        F_z_des = params.m*params.g*cos(x(8))*cos(x(7)); % compenso solo la gravità
         %Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z); %PD
         Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z) +ki_z*x(34); %PID
 
@@ -1369,11 +1369,6 @@ switch test_id
         % den_roll = cos(x(8))*params.m*params.g;
         % roll = asin(num_roll/den_roll);
         
-        % vy_des = 0;
-        % e_vy = vy_des - vy_global;
-        % 
-        % kp_vy = 0.5;                
-        % phi_cmd = kp_vy * e_vy;
 
         y_des = 0;
         e_y = y_des - x(2);
@@ -1390,8 +1385,6 @@ switch test_id
 
         %phi_cmd = kp_y * e_y +kp_vy * e_vy; % PD
         phi_cmd = kp_y * e_y +kp_vy * e_vy +ki_y*x(33);% PID
-
-
 
         %phi_des = roll + phi_cmd; 
         phi_des = phi_cmd;
@@ -1413,23 +1406,17 @@ switch test_id
         %   PITCH (PD/PID)
         % =========================================================
 
-        % vx_des = 0;                       
-        % e_vx = vx_des - vx_global;
-        % 
-        % kp_vx = 0.5;                      
-        % ax_des = kp_vx * e_vx;
-
-        x_des = 0;                       
+        x_des = 0;
         e_x = x_des - x(1);
-        
-        vx_des = 0;                       
+
+        vx_des = 0;
         e_vx = vx_des - vx_global;
 
         % per integrale dell'errore di posizione lungo x
         u(13) = e_x;
 
-        kp_x = 0.5; 
-        kp_vx = 0.5; 
+        kp_x = 0.5;
+        kp_vx = 0.5;
         ki_x = 0.05;
 
         %ax_des = kp_x * e_x + kp_vx * e_vx; %PD
@@ -1441,7 +1428,7 @@ switch test_id
         theta_max = deg2rad(20);
         theta_cmd = max(min(theta_cmd, theta_max), -theta_max);
 
-        theta_des = theta_cmd;     
+        theta_des = theta_cmd;
         %theta_des = 0;
 
         e_theta = theta_des - theta;
@@ -1477,7 +1464,7 @@ switch test_id
         denom_mix = params.d_mx*params.k*sin(theta3_actual) ...
             - params.d_tx*params.k*sin(theta3_actual) ...
             + params.b*cos(theta3_actual);
-        %if abs(denom_mix) < 1e-6; denom_mix = 1e-6; end
+
 
         numeratore_coda = (params.d_mx * Thrust_req) - Moment_pitch_req;
         omega3_sq = numeratore_coda / denom_mix;
@@ -1486,9 +1473,6 @@ switch test_id
 
         % Spinta totale richiesta ai motori anteriori (componente Z)
         F_front_tot_z = Thrust_req - F_tail_z;
-        
-        % Protezione per evitare divisioni per zero se i motori anteriori sono spenti
-        %if F_front_tot_z < 0.1; F_front_tot_z = 0.1; end
 
         omega_front_sq_base = F_front_tot_z / (2 * params.k*sin(x(13)));
 
@@ -1500,16 +1484,13 @@ switch test_id
         omega_sx_sq = omega_front_sq_base + delta_omega_sq;
 
         % --- 3. Mixing Yaw ---
-        
-        %delta_tilt_yaw = Moment_yaw_req / (F_front_tot_z * params.d_my);
-        
+
         delta_tilt_yaw = pi/2 - atan2(F_front_tot_z * params.d_my,Moment_yaw_req);
 
         % Saturazione del tilt per sicurezza (es. max 20 gradi = 0.35 rad)
         max_tilt = 0.35;
-        
+
         delta_tilt_yaw = max(min(delta_tilt_yaw, max_tilt), -max_tilt);
-        %delta_tilt_yaw = 0;
 
         % Assegnazione Tilt (Partendo da pi/2 verticale)
         tilt_1 = pi/2 + delta_tilt_yaw; % Motore DX (1)
@@ -1523,10 +1504,55 @@ switch test_id
         u(1) = sqrt(omega_dx_sq);
         u(2) = sqrt(omega_sx_sq);
         u(3) = sqrt(omega3_sq);
-        u(4) = tilt_1;  % Tilt Destro 
-        u(5) = tilt_2;  % Tilt Sinistro 
+        u(4) = tilt_1;  % Tilt Destro
+        u(5) = tilt_2;  % Tilt Sinistro
         u(6) = theta3_ideal;
         u(7) = -pi/2;
+
+
+    case 15
+
+        % angoli di roll ,pitch, yaw
+        phi = x(7);
+        theta = x(8);
+        psi = x(9);
+
+        R = matriceRotazione(phi,theta,psi); % matrice di rotazione
+        V_body = [x(4);x(5);x(6)]; % velocità nel body frame
+        V_global = R*V_body ;
+        vx_global = V_global(1);
+
+        % wind frame 
+        Va = sqrt((x(4)^2)+(x(5)^2)+(x(6)^2)); % airspeed
+        %alpha = atan2(x(6),x(4)); % angle of attack
+        %beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
+        alpha = 0;
+        beta = 0;
+        Rwb = matriceRotazioneWingToBodyFrame(alpha,beta);
+
+        % controllo
+
+        u = zeros(16,1);
+
+        vx_des = 25;
+
+        kp_x = 5;
+
+        F_x_des = (1/2)*params.rho*params.s_body_x*params.C_d_x*sign(x(4))*x(4)^2 -params.rho*params.s*(Va^2)*Rwb(1,:)*[-params.C_d;params.C_y;-params.C_l];
+        F_x_des = F_x_des +kp_x*(vx_des-vx_global);
+
+        % Assegna ai due rotori anteriori
+        T_i = F_x_des/2;
+
+        u(1) = sqrt(T_i/params.k);   % omega1
+        u(2) = u(1);                 % omega2
+        u(3) = 0;                    % omega3 -> rotore di coda spento
+        u(4) = 0;             % tilt rotore 1
+        u(5) = 0;             % tilt rotore 2
+        u(6) = 0;
+        u(7) = 0;
+
+
 
     otherwise
         error('Controllo non valido');
