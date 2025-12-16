@@ -1332,11 +1332,11 @@ switch test_id
  
 
         % PD Attitudine (Roll & Pitch)
-        kp_phi = 15;   kd_phi = 3;
-        kp_theta = 15; kd_theta = 3;
+        kp_phi = 15;   kd_phi = 3; ki_phi = 0.05;
+        kp_theta = 15; kd_theta = 3; ki_theta = 0.05;
 
         % PD Yaw (Imbardata)
-        kp_psi = 15;   kd_psi = 3;
+        kp_psi = 15;   kd_psi = 3; ki_psi = 0.005;
 
         % =========================================================
         %   QUOTA - HOVERING (PD)
@@ -1348,15 +1348,20 @@ switch test_id
         e_z = z_des - x(3);
         de_z = vz_des - vz_global;
 
+        % per integrale dell'errore di posizione lungo z
+        u(15) = e_z;
+
         kp_z = -5;
         kd_z = -10;
+        ki_z = -0.005;
         
 
         F_z_des = -params.C_l*params.rho*params.s*x(4)^2 +params.m*params.g*cos(x(8))*cos(x(7)) - params.rho*params.s_body_z*params.C_d_z*sign(x(6))*x(6)^2;
-        Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z); %PD
+        %Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z); %PD
+        Thrust_req = F_z_des +kp_z*(e_z)+kd_z*(de_z) +ki_z*x(34); %PID
 
         % =========================================================
-        %   ROLL (PD)
+        %   ROLL (PD/PID)
         % =========================================================
 
         % angolo richiesto per compensare inclinazione rotore posteriore
@@ -1376,9 +1381,15 @@ switch test_id
         vy_des = 0;
         e_vy = vy_des - vy_global;
 
+        % per integrale dell'errore di posizione lungo y
+        u(14) = e_y;
+
         kp_y = 0.5;    
-        kp_vy = 0.5;                
-        phi_cmd = kp_y * e_y +kp_vy * e_vy;
+        kp_vy = 0.5;  
+        ki_y = 0.05;
+
+        %phi_cmd = kp_y * e_y +kp_vy * e_vy; % PD
+        phi_cmd = kp_y * e_y +kp_vy * e_vy +ki_y*x(33);% PID
 
 
 
@@ -1392,10 +1403,14 @@ switch test_id
         e_phi = phi_des - phi;
         de_phi = 0 - p;
 
-        Moment_roll_req = kp_phi * e_phi + kd_phi * de_phi;
+        %Moment_roll_req = kp_phi * e_phi + kd_phi * de_phi; % (PD)
+        Moment_roll_req = kp_phi * e_phi + kd_phi * de_phi + ki_phi*x(29); % (PID)
+
+        % per integrale dell'errore di roll
+        u(10) = e_phi;
 
         % =========================================================
-        %   PITCH (PD)
+        %   PITCH (PD/PID)
         % =========================================================
 
         % vx_des = 0;                       
@@ -1410,9 +1425,15 @@ switch test_id
         vx_des = 0;                       
         e_vx = vx_des - vx_global;
 
+        % per integrale dell'errore di posizione lungo x
+        u(13) = e_x;
+
         kp_x = 0.5; 
-        kp_vx = 0.5;                      
-        ax_des = kp_x * e_x + kp_vx * e_vx;
+        kp_vx = 0.5; 
+        ki_x = 0.05;
+
+        %ax_des = kp_x * e_x + kp_vx * e_vx; %PD
+        ax_des = kp_x * e_x + kp_vx * e_vx +ki_x*x(32); %PID
 
         theta_cmd = -ax_des;
 
@@ -1426,25 +1447,33 @@ switch test_id
         e_theta = theta_des - theta;
         de_theta = 0 - q;
 
-        Moment_pitch_req = kp_theta * e_theta + kd_theta * de_theta;
+        %Moment_pitch_req = kp_theta * e_theta + kd_theta * de_theta; %(PD)
+        Moment_pitch_req = kp_theta * e_theta + kd_theta * de_theta + ki_theta*x(30); % (PID)
+
+        % per integrale dell'errore di pitch
+        u(11) = e_theta;
 
         % =========================================================
-        %   YAW (PD)
+        %   YAW (PD/PID)
         % =========================================================
         psi_des = 0;
 
         e_psi = psi_des - psi;
         de_psi = 0 - r;
 
-        Moment_yaw_req = kp_psi * e_psi + kd_psi * de_psi;
+        %Moment_yaw_req = kp_psi * e_psi + kd_psi * de_psi; % (PD)
+        Moment_yaw_req = kp_psi * e_psi + kd_psi * de_psi + ki_psi*x(31); %(PID)
+
+        % per integrale dell'errore di yaw
+        u(12) = e_psi;
 
         % =========================================================
-        %   MIXING E ALLOCAZIONE 
+        %   MOTOR/TILT MIXING ALGORITHM
         % =========================================================
         theta3_ideal = atan2(((-params.d_tx*params.k)/params.b),1);
         theta3_actual = x(17);
 
-        % --- 1. Mixing Longitudinale (Z + Pitch) ---
+        % --- 1. Mixing (Z + Pitch) ---
         denom_mix = params.d_mx*params.k*sin(theta3_actual) ...
             - params.d_tx*params.k*sin(theta3_actual) ...
             + params.b*cos(theta3_actual);
@@ -1463,16 +1492,18 @@ switch test_id
 
         omega_front_sq_base = F_front_tot_z / (2 * params.k*sin(x(13)));
 
-        % --- 2. Mixing Laterale (Roll) ---
+        % --- 2. Mixing Roll ---
         braccio_y = params.d_my;
         delta_omega_sq = Moment_roll_req / (params.k * braccio_y * 2*sin(x(13)));
 
         omega_dx_sq = omega_front_sq_base - delta_omega_sq;
         omega_sx_sq = omega_front_sq_base + delta_omega_sq;
 
-        % --- 3. Mixing Yaw (Tilting) ---
+        % --- 3. Mixing Yaw ---
         
-        delta_tilt_yaw = Moment_yaw_req / (F_front_tot_z * params.d_my);
+        %delta_tilt_yaw = Moment_yaw_req / (F_front_tot_z * params.d_my);
+        
+        delta_tilt_yaw = pi/2 - atan2(F_front_tot_z * params.d_my,Moment_yaw_req);
 
         % Saturazione del tilt per sicurezza (es. max 20 gradi = 0.35 rad)
         max_tilt = 0.35;
