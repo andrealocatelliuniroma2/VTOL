@@ -142,16 +142,15 @@ CL_eff = n * params.C_l;
 F_aeroWing = F_aero_wing(CL_eff,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
 
 
-
-%%%%%%%%%%%%%%%%% VOLO ORIZZONTALE %%%%%%%%%%%%%%%%%%%%%%%%
-
+% %%%%%%%%%%%%%%%%% VOLO ORIZZONTALE %%%%%%%%%%%%%%%%%%%%%%%%
+% 
 % % nuovo metodo : aerodinamica corpo
 % F_aeroBody = Drag_body(params.C_d_x,params.C_d_y,params.C_d_z, params.rho,params.s_body_x,params.s_body_y,params.s_body_z,x(4),x(5),x(6));
 % 
 % % nuovo metodo : aerodinamica ali
 % F_aeroWing = F_aero_wing(params.C_l,params.C_d,params.C_y, params.rho, params.s,Va,Rwb);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 

@@ -155,3 +155,11 @@ theta2 = atan2(ris(2),ris(4));
 
 omega3_2 = sqrt(ris(5)^2 +ris(6)^2);
 theta3 = atan2(ris(5),-ris(6));
+
+%%
+
+syms k c1 c2 dmy
+
+A = [k*(c1+c2) k*(c2-c1);dmy*k*(c2-c1) dmy*k*(c1+c2)];
+disp(A)
+inv(A)

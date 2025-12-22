@@ -10,25 +10,7 @@ test_id = 14;
 
 % 0 : Nessun controllo (solo gravità)
 
-% 1 : compensazione attrito lungo X 
-
-% 2 : controllo velocità lungo X e posizione e velocità lungo Z
-
-% 3 : volo verticale (senza momento torcente)  
-% NB: per il test 3
-% dmx = -(1/2)*dtx (serve a compensare momento di pitch)
-% usare M_thrust_noTorc (tolgo momento torcente)
-% mettere il rotore di coda inclinato verticalmente (x0(17)= pi/2; x0(19)=0)
-
-% 4 : volo verticale (con momento torcente)  
-
-% 5 : volo orizzontale (rotore di coda spento)
-
-% 6 : transizione da volo verticale a volo orizzontale (non funzionante)
-
-% 7 : transizione da volo verticale a volo orizzontale (funzionante ma senza dinamica rotori e tilting)
-
-% 12 : orientamento 
+% 14 : orientamento + volo verticale (FUNZIONANTE)
 
 switch test_id
 
@@ -1524,10 +1506,10 @@ switch test_id
 
         % wind frame 
         Va = sqrt((x(4)^2)+(x(5)^2)+(x(6)^2)); % airspeed
-        %alpha = atan2(x(6),x(4)); % angle of attack
-        %beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
-        alpha = 0;
-        beta = 0;
+        alpha = atan2(-x(6),x(4)); % angle of attack
+        beta = atan2(x(5),sqrt((x(4)^2)+(x(6)^2))); % sideslip angle
+        % alpha = 0;
+        % beta = 0;
         Rwb = matriceRotazioneWingToBodyFrame(alpha,beta);
 
         % controllo
@@ -1552,6 +1534,62 @@ switch test_id
         u(6) = 0;
         u(7) = 0;
 
+
+        % MMA (idea)
+        F_x_des = 0;
+        M_x_des = 0;
+        M_y_des = 0;
+        M_z_des = 0;
+        
+        %%%%%%%%%%%%%%%%%%%% per evitare omega_2 < 0 :
+        M_z_des = max(min(M_z_des,  params.d_my*F_x_des), -params.d_my*F_x_des);
+        % NB : min(M_z_des,  params.d_my*F_x_des) impedisce che M_z_des
+        % superi params.d_my*F_x_des
+        % NB : max(*,-params.d_my*F_x_des) impedisce che M_z_des scenda
+        % sotto -params.d_my*F_x_des
+
+
+        X1 = (F_x_des - (M_z_des/params.d_my))/2;
+        X2 = (F_x_des + (M_z_des/params.d_my))/2;
+        
+        Z1 = ((M_y_des/params.d_mx) - (M_x_des/params.d_my))/2;
+        Z2 = ((M_y_des/params.d_mx) + (M_x_des/params.d_my))/2;
+
+        theta1 = atan2(Z1,X1);
+        theta2 = atan2(Z2,X2);
+
+        delta_pitch = (theta1 + theta2)/2;
+        delta_roll = (theta2 - theta1)/2;
+
+        theta1_base = 0;
+        theta2_base = 0;
+
+        tilt_1 = theta1_base +delta_pitch -delta_roll; % inclinazione rotore anteriore dx
+        tilt_2 = theta2_base +delta_pitch +delta_roll; % inclinazione rotore anteriore sx
+
+        %%%%%%%%%%%%%%%%%%%% eventuale saturazione %%%%%%%%%%%%%%%%
+        % tilt_max = deg2rad(20);
+        % tilt_1 = max(min(tilt_1, tilt_max), -tilt_max);
+        % tilt_2 = max(min(tilt_2, tilt_max), -tilt_max);
+
+
+        tilt_3 = 0; % inclinazione rotore coda
+        tilt_4 = 0; % inclinazione rotore coda
+
+        c1 = cos(theta1); %%%%%%%%%%%% se saturo tilt_1 allora qui va cos(tilt_1)
+        c2 = cos(theta2); %%%%%%%%%%%% se saturo tilt_2 allora qui va cos(tilt_2)
+
+        den_omega = 4*c1*c2*params.k;
+
+        % omega di base al quadrato
+        omega_base_2 = ((c1+c2)*F_x_des + (c1-c2)*(M_z_des/params.d_my))/den_omega;
+        % delta omega al quadrato
+        delta_omega_2 = ((c1-c2)*F_x_des + (c1+c2)*(M_z_des/params.d_my))/den_omega;
+
+        
+        omega1_2 = omega_base_2 - delta_omega_2; % velocità angolare (al quadrato) del rotore anteriore dx
+        omega2_2 = omega_base_2 + delta_omega_2; % velocità angolare (al quadrato) del rotore anteriore sx
+        omega3_2 = 0; % velocità angolare (al quadrato) del rotore di coda
 
 
     otherwise

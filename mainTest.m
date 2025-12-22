@@ -216,9 +216,9 @@ if voloVerticale == 1
     % posizione iniziale lungo z
     x0(3) = 0;
 
-    % x0(7) = deg2rad(20);
-    % x0(8) = deg2rad(20);
-    % x0(9) = deg2rad(20);
+    % x0(7) = deg2rad(10);
+    % x0(8) = deg2rad(10);
+    % x0(9) = deg2rad(10);
 
     %inclinazione iniziale dei rotori anterioiri (per il volo verticale)
     x0(13)= pi/2;
@@ -242,14 +242,11 @@ elseif voloOrizzontale == 1
 
     % velocità angolare iniziale dei rotori anteriori
     Va = sqrt((x0(4)^2)+(x0(5)^2)+(x0(6)^2)); % airspeed
-    %alpha = atan2(x0(6),x0(4)); % angle of attack
-    %beta = atan2(x0(5),sqrt((x0(4)^2)+(x0(6)^2))); % sideslip angle
-    alpha = 0;
-    beta = 0;
+    alpha = atan2(-x0(6),x0(4)); % angle of attack
+    beta = atan2(x0(5),sqrt((x0(4)^2)+(x0(6)^2))); % sideslip angle
     Rwb = matriceRotazioneWingToBodyFrame(alpha,beta);
      
     F0_x = (1/2)*parametri.rho*parametri.s_body_x*parametri.C_d_x*sign(x0(4))*x0(4)^2 -parametri.rho*parametri.s*(Va^2)*Rwb(1,:)*[-parametri.C_d;parametri.C_y;-parametri.C_l];
-    
     T_i = F0_x/2;
     x0(21)= sqrt(T_i/parametri.k);
     x0(23)= x0(21);
@@ -558,13 +555,13 @@ if flagPlot == 1
         figure(2)
         set(gcf, 'Position', [100 100 1200 900])
 
-        % --- vz ---
+        % --- vx ---
         subplot(3,1,1);
         h3=plot(time, xv, 'r', 'LineWidth', 2); hold on;
         h4=yline(25,'--k','LabelHorizontalAlignment','left','FontSize',12,'LineWidth', 2);
         grid on; ylim([-10 40])
         xlabel('Time [s]', 'FontSize', 14)
-        ylabel('v_z [m/s]', 'FontSize', 14)
+        ylabel('v_x [m/s]', 'FontSize', 14)
         title('Velocità lungo x','FontSize',16)
         set(gca, 'FontSize', 14)
         legend([h3 h4], {'v_x','vx_{des}'}, 'Interpreter','tex','FontSize',12,'Location','best')
@@ -573,24 +570,24 @@ if flagPlot == 1
         subplot(3,1,3);
         h5=plot(time, zv, 'b', 'LineWidth', 2); hold on;
         h6=yline(0,'--k','LabelHorizontalAlignment','left','FontSize',12,'LineWidth', 2);
-        grid on; ylim([-20 20])
+        grid on; %ylim([-20 20])
         xlabel('Time [s]', 'FontSize', 14)
         ylabel('v_z [m/s]', 'FontSize', 14)
         title('Velocità lungo z','FontSize',16)
         set(gca, 'FontSize', 14)
-        legend([h3 h4], {'v_z','vz_{des}'}, 'Interpreter','tex','FontSize',12,'Location','best')
+        legend([h5 h6], {'v_z','vz_{des}'}, 'Interpreter','tex','FontSize',12,'Location','best')
 
 
         % --- z (quota) ---
         subplot(3,1,2);
         h7=plot(time, zp, 'g', 'LineWidth', 2); hold on;
         h8=yline(10,'--k','LabelHorizontalAlignment','left','FontSize',12,'LineWidth', 2);
-        grid on; ylim([-50 20])
+        grid on; %ylim([-50 20])
         xlabel('Time [s]', 'FontSize', 14)
         ylabel('Quota z [m]', 'FontSize', 14)
         title('Posizione lungo z','FontSize',16)
         set(gca, 'FontSize', 14)
-        legend([h5 h6], {'z','z_{des}'}, 'Interpreter','tex','FontSize',12,'Location','best')
+        legend([h7 h8], {'z','z_{des}'}, 'Interpreter','tex','FontSize',12,'Location','best')
 
 
         % thrust genearato dai rotori
